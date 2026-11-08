@@ -8,9 +8,9 @@ Det tilbys API for følgende områder:
 * Aggregert takstbruk
 * Bandasjister med direkte oppgjørsavtale
 * Takstkoder
-* Labratoriekodeverk (NLK-koder)
+* Laboratoriekodeverk (NLK-koder)
 * Refusjonskategorier for NLK, NCRP og patologi
-* Apat kombinasjoner
+* Apat-kombinasjoner
 
 
 Lisens for offentlige data https://data.norge.no/nlod/no
@@ -51,19 +51,19 @@ URL https://opne-data-api.helserefusjon.no/v1/takstkoder
 
 | takst_id |
 | takstkode |
-| fagomraade |
-| fradato |
-| tildato |
-| honorar |
-| refusjon |
-| egenandel |
+| fagomraade | Fagområdekode, se <<Fagområder>>
+| fradato | Gyldig fra og med (`yyyy-MM-dd`)
+| tildato | Gyldig til og med. Mangler hvis takstkoden fortsatt er gyldig.
+| honorar | Samlet honorar for takstkoden: `refusjon` + `egenandel`
+| refusjon | Beløpet som dekkes av folketrygden
+| egenandel | Pasientens egenandel
 | pasient_egenbetaling |
 | maks_repetisjoner |
 | repetisjonsprosent |
 | redusert_ref_fra_repetisjon |
 | redusert_repetisjonsprosent |
-| spesialisttakst |
-| ugyldig_kombinasjon |
+| spesialisttakst | `true` eller `false` (som tekst)
+| ugyldig_kombinasjon | Takstkoder som ikke kan kombineres med denne, skilt med `\|`
 | krever_takst |
 | krever_prosedyre |
 | krever_diagnose |
@@ -74,7 +74,10 @@ URL https://opne-data-api.helserefusjon.no/v1/takstkoder
 | beskrivelse |
 | resource_id |
 | tidsbruk_per_rep |
+| merknader | Liste av merknader til takstkoden, hver med `merknad_nr` og `beskrivelse`
 |===
+
+Felt uten verdi er utelatt fra svaret.
 
 
 === Parametre
@@ -83,19 +86,19 @@ URL https://opne-data-api.helserefusjon.no/v1/takstkoder
 | Parameter | Beskrivelse
 
 | HTTP Header: Accept| Angir hvilket format data skal leveres på. Støtter application/xml og application/json
-| Query: fagomraade | AP - Audiopedagog, BE - Behandlingsreiser i utlandet, FBV - Fritt behandlingsvalg, FY - Fysioterapi, HS - Helsestasjon, JO - Jordmor, KI - Kiropraktor, LE - Lege, LOGO - Logoped, LR - Privat lab/radiologi, OR - Ortoptist, PO - Poliklinikk, PS - Psykolog, PT - Primærhelseteam, RE - Rehabiliteringsinstitusjon, TH - Tannhelse, TP - Tannpleier
-| Query: gyldigdato | Filtrerer takstene til kun de som er gyldig på en gitt dato. Dato på formatet  yyyy-MM-dd
+| Query: fagomraade | Fagområdekode, se <<Fagområder>>
+| Query: gyldigdato | Filtrerer takstene til kun de som er gyldige på en gitt dato. Dato på formatet `yyyy-MM-dd`
 | Query: takstkode | Filtrer takstene til en gitt kode, kan kombineres med de andre parametrene eller brukes alene.
 | Query: beskrivelse | Filtrer på beskrivelsen til takstkoden, kan kombineres med de andre parametrene eller brukes alene.
 | Query: offisielle_ugyldige_takstkombinasjoner | Filtrer offisielle ugyldige takstkombinasjoner definert i feltet ugyldig_kombinasjon. Om alt filtreres så endres 'Alle unntatt' til 'Alle'. Mulige parametre: ja/nei.
 |===
-For query på takstkode og beskrivelse kan %25 brukes for å angi wildcard søk. Feks. %25undersøkelse%25 for å søke på alt som inneholder undersøkelse.
+For query på takstkode og beskrivelse kan `%25` (URL-kodet `%`) brukes som jokertegn. F.eks. `%25undersøkelse%25` for å søke på alt som inneholder «undersøkelse».
 
-==== Eksempel:
-https://opne-data-api.helserefusjon.no/v1/takstkoder?gyldigdato=2018-08-09&takstkode=2ad
+=== Eksempel
+https://opne-data-api.helserefusjon.no/v1/takstkoder?gyldigdato=2026-11-01&takstkode=2ad
 
 
-== Labratoriekodeverk (NLK-koder)
+== Laboratoriekodeverk (NLK-koder)
 URL https://opne-data-api.helserefusjon.no/v1/nlkkoder
 
 === Datainnhold
@@ -126,7 +129,7 @@ URL https://opne-data-api.helserefusjon.no/v1/nlkkoder
 | systemSpesifikasjon |
 | egenskapsartSpesifikasjon |
 | gruppering |
-| refusjonskategorisats | Liste av refusjonskategorier, se NLK refusjonskategorier for beskrivelse av feltene.
+| refusjonskategorisats | Liste over alle satser (også historiske) for kodens refusjonskategori, se <<refusjonskategorier,Refusjonskategorier for NLK, NCRP og patologi>> for beskrivelse av feltene.
 |===
 
 === Parametre
@@ -135,16 +138,17 @@ URL https://opne-data-api.helserefusjon.no/v1/nlkkoder
 | Parameter | Beskrivelse
 
 | HTTP Header: Accept| Angir hvilket format data skal leveres på. Støtter application/xml og application/json
-| Query: gyldigdato | Filtrerer kodene til kun de som er gyldig på en gitt dato. Dato på formatet  yyyy-MM-dd
+| Query: gyldigdato | Filtrerer kodene til kun de som er gyldige på en gitt dato. Dato på formatet `yyyy-MM-dd`
 | Query: nlkkode | Filtrer til en gitt kode
 | Query: samhandlertype | PO - Poliklinikk, LR - Privat lab/radiologi
 |===
 
-For query på nlkkode %25 brukes for å angi wildcard søk.
+For query på nlkkode kan `%25` (URL-kodet `%`) brukes som jokertegn.
 
-==== Eksempel:
+=== Eksempel
 https://opne-data-api.helserefusjon.no/v1/nlkkoder?gyldigdato=2025-06-04&nlkkode=NOR35342
 
+[[refusjonskategorier]]
 == Refusjonskategorier for NLK, NCRP og patologi
 URL https://opne-data-api.helserefusjon.no/v1/refusjonskategorisatser
 
@@ -155,9 +159,10 @@ URL https://opne-data-api.helserefusjon.no/v1/refusjonskategorisatser
 
 | refusjonskategoriid |
 | refusjonskategori |
+| samhandlertype | PO - Poliklinikk, LR - Privat lab/radiologi
 | refusjonssats |
-| fradato |
-| tildato |
+| fradato | Gyldig fra og med (`yyyy-MM-dd`)
+| tildato | Gyldig til og med. Mangler hvis satsen fortsatt er gyldig.
 |===
 
 
@@ -167,15 +172,15 @@ URL https://opne-data-api.helserefusjon.no/v1/refusjonskategorisatser
 | Parameter | Beskrivelse
 
 | HTTP Header: Accept| Angir hvilket format data skal leveres på. Støtter application/xml og application/json
-| Query: gyldigdato | Filtrerer kodene til kun de som er gyldig på en gitt dato. Dato på formatet  yyyy-MM-dd
+| Query: gyldigdato | Filtrerer kodene til kun de som er gyldige på en gitt dato. Dato på formatet `yyyy-MM-dd`
 | Query: samhandlertype | PO - Poliklinikk, LR - Privat lab/radiologi
 |===
 
-==== Eksempel:
-https://opne-data-api.helserefusjon.no/v1/refusjonskategorisatser?gyldigdato=2018-08-09&samhandlertype=PO
+=== Eksempel
+https://opne-data-api.helserefusjon.no/v1/refusjonskategorisatser?gyldigdato=2026-11-01&samhandlertype=PO
 
 
-== Apat kombinasjoner
+== Apat-kombinasjoner
 URL https://opne-data-api.helserefusjon.no/v1/apatkombinasjoner
 
 === Datainnhold
@@ -187,10 +192,9 @@ URL https://opne-data-api.helserefusjon.no/v1/apatkombinasjoner
 | p_kode |
 | refusjonskategori |
 | belop |
-| samhandler_type |
-| fradato |
-| tildato |
-| fradato |
+| samhandler_type | PO - Poliklinikk, LR - Privat lab/radiologi
+| fradato | Gyldig fra og med (`yyyy-MM-dd`)
+| tildato | Gyldig til og med. Mangler hvis kombinasjonen fortsatt er gyldig.
 |===
 
 === Parametre
@@ -199,29 +203,61 @@ URL https://opne-data-api.helserefusjon.no/v1/apatkombinasjoner
 | Parameter | Beskrivelse
 
 | HTTP Header: Accept| Angir hvilket format data skal leveres på. Støtter application/xml og application/json
-| Query: gyldigdato | Filtrerer kodene til kun de som er gyldig på en gitt dato. Dato på formatet  yyyy-MM-dd
+| Query: gyldigdato | Filtrerer kodene til kun de som er gyldige på en gitt dato. Dato på formatet `yyyy-MM-dd`
 | Query: samhandlertype | PO - Poliklinikk, LR - Privat lab/radiologi
 |===
 
-== Aggregert takstbruk
-APIet tilbyr takstbruk statistikk for kommuner og fylker, fordelt på år, måned, fagområder og praksistyper. Den geografiske inndeling
-er basert på behandlers adresse. For kommuner/år er tallene begrenset til å bare ta med takster der antallet er større enn 5. For kommune/måned tallene
-er det begrenset til kommuner over 10 000 innbyggere.
+=== Eksempel
+https://opne-data-api.helserefusjon.no/v1/apatkombinasjoner?gyldigdato=2026-11-01&samhandlertype=PO
 
-Hvert API kan enten hente ut data som JSON eller XML eller som CSV. Det er forskjellige URLer avhengig av om det er JSON / XML eller CSV.
+== Aggregert takstbruk
+APIet tilbyr statistikk over takstbruk for kommuner, fylker og hele landet, fordelt på år, måned, fagområder og praksistyper. Den geografiske inndelingen
+er basert på behandlers adresse. For kommune/år er tallene begrenset til takster der antallet er større enn 5. For kommune/måned er tallene
+begrenset til kommuner med over 10 000 innbyggere.
+
+Dataene kan hentes som JSON eller XML, som CSV eller som Excel. Hvert format har sin egen URL.
+
+=== URLer
+
+URLene er satt sammen av et prefiks for formatet, et geografisk nivå og en periode:
+
+----
+https://opne-data-api.helserefusjon.no/v1/takstbruk/<format>/agtakst/<nivå>/<periode>
+----
+
+|===
+| Del | Verdier
+
+| `<format>` | Utelates for JSON eller XML (`.../takstbruk/agtakst/...`), `eksport` for CSV, `eksport/msexcel` for Excel
+| `<nivå>` | `kommune`, `fylke` eller `landet`
+| `<periode>` | `maned` eller `ar`
+|===
+
+Det gir 18 URLer, for eksempel:
+
+|===
+| URL | Resultatformat
+
+| https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/kommune/maned | JSON eller XML
+| https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/agtakst/kommune/maned | CSV
+| https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/msexcel/agtakst/kommune/maned | Excel
+|===
+
+CSV-filen er semikolonseparert og har en overskriftslinje.
 
 === Datainnhold
 
 |===
 | Felt | Beskrivelse
 
-| ar |
-| maned |
+| ar | År
+| maned | Måned (`01`–`12`). Bare for periode `maned`.
 | takstkode |
-| fagomraade |
-| praksis_type_kode |
-| behandler_kommunenr |
-| behandler_fylke |
+| fagomraade | Fagområdekode, se <<Fagområder>>
+| praksis_type_kode | Praksistypekode, se <<Praksistyper>>
+| samhandler_praksis_type | Navn på praksistypen. Heter `praksis_type_navn` i CSV.
+| behandler_kommunenr | Bare for nivå `kommune`
+| behandler_fylke | Bare for nivå `fylke`
 | antall_regninger |
 | sum_antall_takst |
 | sum_refusjon |
@@ -229,192 +265,62 @@ Hvert API kan enten hente ut data som JSON eller XML eller som CSV. Det er forsk
 | sum_egenandel_dekket_av_folketrygden |
 |===
 
-
-=== Kommune / Måned
-|===
-|URL | Resultat format
-
-| https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/kommune/maned | JSON eller XML
-| https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/agtakst/kommune/maned | CSV
-| https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/msexcel/agtakst/kommune/maned | Excel
-|===
+=== Parametre
 
 |===
-| Parameter | Beskrivelse
+| Parameter | Gjelder for | Beskrivelse
 
-| HTTP Header: Accept| Angir hvilket format data skal leveres på. Støtter application/xml og application/json
-| Query: fagomraade | Obligatorisk, komma separerte verdier. Se kodeverk for mulig verdier
-| Query: fommaned | Obligatorisk, lengden på perioden kan ikke være mer enn 13 måneder
-| Query: tommaned | Obligatorisk, lengden på perioden kan ikke være mer enn 13 måneder
-| Query: takstkoder | Komma separerte verdier. Se kodeverk for mulig verdier
-| Query: kommuner | Komma separerte verdier. Se kodeverk for mulig verdier
-| Query: praksistyper | Komma separerte verdier. Se kodeverk for mulig verdier
+| HTTP Header: Accept | JSON/XML | Angir hvilket format data skal leveres på. Støtter application/xml og application/json
+| Query: fagomraade | Alle | Obligatorisk. Kommaseparerte verdier, se <<Fagområder>>
+| Query: fommaned | Periode `maned` | Obligatorisk. Første måned på formatet `yyyyMM`. Perioden kan ikke være lengre enn 13 måneder
+| Query: tommaned | Periode `maned` | Obligatorisk. Siste måned på formatet `yyyyMM`
+| Query: fomar | Periode `ar` | Obligatorisk. Første år på formatet `yyyy`
+| Query: tomar | Periode `ar` | Obligatorisk. Siste år på formatet `yyyy`
+| Query: takstkoder | Alle | Kommaseparerte verdier, se <<Takstkoder>>
+| Query: kommuner | Nivå `kommune` | Kommaseparerte verdier, se <<Kommunenummer>>
+| Query: fylker | Nivå `fylke` | Kommaseparerte verdier, se <<Fylkesnummer>>
+| Query: praksistyper | Alle | Kommaseparerte verdier, se <<Praksistyper>>
 |===
 
-===== Eksempel:
-JSON / XML:
+Mangler et obligatorisk parameter, svarer APIet med `400`. Ugyldige verdier, for eksempel en periode over 13 måneder,
+gir ingen feilmelding, men et tomt svar (`{}` for JSON, bare overskriftslinjen for CSV).
 
-https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/kommune/maned?fagomraade=LE&fommaned=201805&tommaned=201905&takstkoder=H1&kommuner=0301&praksistyper=FALE,LEVA
+=== Eksempler
+JSON eller XML. For CSV eller Excel settes `eksport/` eller `eksport/msexcel/` inn foran `agtakst/`.
 
-CSV:
+Kommune / måned::
+https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/kommune/maned?fagomraade=LE&fommaned=202401&tommaned=202412&takstkoder=2ad&kommuner=0301&praksistyper=FALE,LEVA
 
-https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/agtakst/kommune/maned?fagomraade=LE&fommaned=201805&tommaned=201905&takstkoder=H1&kommuner=0301&praksistyper=FALE,LEVA
+Kommune / år::
+https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/kommune/ar?fagomraade=LE&fomar=2020&tomar=2024&takstkoder=2ad&kommuner=0301&praksistyper=FALE,LEVA
 
-=== Kommune / År
-|===
-|URL | Resultat format
+Fylke / måned::
+https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/fylke/maned?fagomraade=LE&fommaned=202401&tommaned=202412&takstkoder=2ad&fylker=03,46&praksistyper=FALE,LEVA
 
-| https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/kommune/ar | JSON eller XML
-| https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/agtakst/kommune/ar | CSV
-| https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/msexcel/agtakst/kommune/ar | Excel
-|===
+Fylke / år::
+https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/fylke/ar?fagomraade=LE&fomar=2020&tomar=2024&takstkoder=2ad&fylker=03,46&praksistyper=FALE,LEVA
 
-|===
-| Parameter | Beskrivelse
+Hele landet / måned::
+https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/landet/maned?fagomraade=LE&fommaned=202401&tommaned=202412&takstkoder=2ad&praksistyper=FALE,LEVA
 
-| HTTP Header: Accept| Angir hvilket format data skal leveres på. Støtter application/xml og application/json
-| Query: fagomraade | Obligatorisk, komma separerte verdier. Se kodeverk for mulig verdier
-| Query: fomar | Obligatorisk
-| Query: tomar | Obligatorisk
-| Query: takstkoder | Komma separerte verdier. Se kodeverk for mulig verdier
-| Query: kommuner | Komma separerte verdier. Se kodeverk for mulig verdier
-| Query: praksistyper | Komma separerte verdier. Se kodeverk for mulig verdier
-|===
+Hele landet / år::
+https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/landet/ar?fagomraade=LE&fomar=2020&tomar=2024&takstkoder=2ad&praksistyper=FALE,LEVA
 
-===== Eksempel:
-JSON / XML:
-
-https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/kommune/ar?fagomraade=LE&fomar=2015&tomar=2019&takstkoder=H1&kommuner=0301&praksistyper=FALE,LEVA
-
-CSV:
-https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/agtakst/kommune/ar?fagomraade=LE&fomar=2015&tomar=2019&takstkoder=H1&kommuner=0301&praksistyper=FALE,LEVA
-
-
-=== Fylke / Måned
-|===
-|URL | Resultat format
-
-| https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/fylke/maned | JSON eller XML
-| https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/agtakst/fylke/maned | CSV
-| https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/msexcel/agtakst/fylke/maned | Excel
-|===
-
-|===
-| Parameter | Beskrivelse
-
-| HTTP Header: Accept| Angir hvilket format data skal leveres på. Støtter application/xml og application/json
-| Query: fagomraade | Obligatorisk, komma separerte verdier. Se kodeverk for mulig verdier
-| Query: fommaned | Obligatorisk, lengden på perioden kan ikke være mer enn 13 måneder
-| Query: tommaned | Obligatorisk, lengden på perioden kan ikke være mer enn 13 måneder
-| Query: takstkoder | Komma separerte verdier. Se kodeverk for mulig verdier
-| Query: fylker | Komma separerte verdier. Se kodeverk for mulig verdier
-| Query: praksistyper | Komma separerte verdier. Se kodeverk for mulig verdier
-|===
-
-===== Eksempel:
-JSON / XML:
-
-https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/fylke/maned?fagomraade=LE&fommaned=201805&tommaned=201905&takstkoder=H1&fylker=03,15&praksistyper=FALE,LEVA
-
-CSV:
-https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/agtakst/fylke/maned?fagomraade=LE&fommaned=201805&tommaned=201905&takstkoder=H1&fylker=03,15&praksistyper=FALE,LEVA
-
-=== Fylke / År
-|===
-|URL | Resultat format
-
-| https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/fylke/ar | JSON eller XML
-| https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/agtakst/fylke/ar | CSV
-| https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/msexcel/agtakst/fylke/ar | Excel
-|===
-
-|===
-| Parameter | Beskrivelse
-
-| HTTP Header: Accept| Angir hvilket format data skal leveres på. Støtter application/xml og application/json
-| Query: fagomraade | Obligatorisk, komma separerte verdier. Se kodeverk for mulig verdier
-| Query: fomar | Obligatorisk
-| Query: tomar | Obligatorisk
-| Query: takstkoder | Komma separerte verdier. Se kodeverk for mulig verdier
-| Query: fylker | Komma separerte verdier. Se kodeverk for mulig verdier
-| Query: praksistyper | Komma separerte verdier. Se kodeverk for mulig verdier
-|===
-
-===== Eksempel:
-JSON / XML:
-
-https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/fylke/ar?fagomraade=LE&fomar=2015&tomar=2019&takstkoder=H1&fylker=03,15&praksistyper=FALE,LEVA
-
-CSV:
-https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/agtakst/fylke/ar?fagomraade=LE&fomar=2015&tomar=2019&takstkoder=H1&fylker=03,15&praksistyper=FALE,LEVA
-
-=== Hele landet / måned
-|===
-|URL | Resultat format
-
-| https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/landet/maned | JSON eller XML
-| https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/agtakst/landet/maned | CSV
-| https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/msexcel/agtakst/landet/maned | Excel
-|===
-
-|===
-| Parameter | Beskrivelse
-
-| HTTP Header: Accept| Angir hvilket format data skal leveres på. Støtter application/xml og application/json
-| Query: fagomraade | Obligatorisk, komma separerte verdier. Se kodeverk for mulig verdier
-| Query: fommaned | Obligatorisk, lengden på perioden kan ikke være mer enn 13 måneder
-| Query: tommaned | Obligatorisk, lengden på perioden kan ikke være mer enn 13 måneder
-| Query: takstkoder | Komma separerte verdier. Se kodeverk for mulig verdier
-| Query: praksistyper | Komma separerte verdier. Se kodeverk for mulig verdier
-|===
-
-===== Eksempel:
-JSON / XML:
-
-https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/landet/maned?fagomraade=LE&fommaned=201805&tommaned=201905&takstkoder=H1&praksistyper=FALE,LEVA
-
-CSV:
-https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/agtakst/landet/maned?fagomraade=LE&fommaned=201805&tommaned=201905&takstkoder=H1&praksistyper=FALE,LEVA
-
-=== Hele landet / år
-|===
-|URL | Resultat format
-
-| https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/landet/ar | JSON eller XML
-| https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/agtakst/landet/ar | CSV
-| https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/msexcel/agtakst/landet/ar | Excel
-|===
-
-|===
-| Parameter | Beskrivelse
-
-| HTTP Header: Accept| Angir hvilket format data skal leveres på. Støtter application/xml og application/json
-| Query: fagomraade | Obligatorisk, komma separerte verdier. Se kodeverk for mulig verdier
-| Query: fomar | Obligatorisk
-| Query: tomar | Obligatorisk
-| Query: takstkoder | Komma separerte verdier. Se kodeverk for mulig verdier
-| Query: praksistyper | Komma separerte verdier. Se kodeverk for mulig verdier
-|===
-
-===== Eksempel:
-JSON / XML:
-
-https://opne-data-api.helserefusjon.no/v1/takstbruk/agtakst/landet/ar?fagomraade=LE&fomar=2015&tomar=2019&takstkoder=H11&praksistyper=FALE,LEVA
-
-==== Eksempel:
-https://opne-data-api.helserefusjon.no/v1/apatkombinasjoner?samhandlertype=PO
+Hele landet / år som CSV::
+https://opne-data-api.helserefusjon.no/v1/takstbruk/eksport/agtakst/landet/ar?fagomraade=LE&fomar=2020&tomar=2024&takstkoder=2ad&praksistyper=FALE,LEVA
 
 == Kodeverk
 
 === Fylkesnummer
 https://data.norge.no/data/statens-kartverk/fylkesnummer
 
-=== Kommunenr
+=== Kommunenummer
 https://data.norge.no/data/kartverket/kommunenummer
 
 === Fagområder
 
-https://opne-data-api.helserefusjon.no/v1/fagomraader
+https://opne-data-api.helserefusjon.no/v1/fagomraader gir fagområdene med tilhørende praksistyper.
+Feltet `aggregertedata` er `1` når det finnes <<Aggregert takstbruk>> for fagområdet eller praksistypen.
 
 |===
 | Kode | Beskrivelse
@@ -445,6 +351,7 @@ https://opne-data-api.helserefusjon.no/v1/fagomraader
 |===
 
 === Praksistyper
+Praksistypene finnes også i svaret fra `/v1/fagomraader`, under hvert fagområde.
 
 |===
 | Kode | Beskrivelse| Fagområde kode
@@ -522,7 +429,7 @@ Henter ut siste gjeldende oversikt over bandasjister som er registrert med direk
 | sar_navn |Navn på bandasjist lagret i SAR
 | sar_orgnr |Orgnr. bandasjisten er lagret med i SAR og det er inngått avtale på
 | hovedenhet_orgnr |Bandasjistens hovedenhet hentet fra BRREG. Kan være det samme som sar_orgnr
-| underenhet_orgnr |Bandasjistens underenhet hentet fra BBREG. Kan være det samme som sar_orgnr. Vil ikke finnes hvis bandasjisten er registrert i SAR med hovedenhetens orgnr.
+| underenhet_orgnr |Bandasjistens underenhet hentet fra BRREG. Kan være det samme som sar_orgnr. Vil ikke finnes hvis bandasjisten er registrert i SAR med hovedenhetens orgnr.
 | gyldig_fra |Fra og til dato for når bandasjisten er gyldig. Styres av avtale og praksis registrering gjort i SAR av Helfo.
 | gyldig_til |
 | status |Kan ha verdien "slettet" hvis bandasjisten ikke lenger er en aktiv enhet i BRREG.
