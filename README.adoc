@@ -22,6 +22,24 @@ APIet var tidligere kun tilgjengelig på https://helserefusjoner-kuhr.nav.no. De
 Ny rot URL er https://opne-data-api.helserefusjon.no. Det er også gjort en endring i pathene på URLene.
 De gamle URLene vil fortsette å fungere inntil ingen bruker de lenger.
 
+=== OpenAPI-spesifikasjon
+link:openapi.yaml[openapi.yaml] beskriver APIet i OpenAPI 3.1-format, og kan åpnes i f.eks. Swagger UI eller brukes til å generere klientkode.
+Spesifikasjonen sjekkes mot svar fra APIet ved hver endring i repoet.
+
+=== Daglige øyeblikksbilder
+Mappen link:data[data] inneholder en kopi av kodeverkene (takstkoder, NLK-koder, refusjonskategorisatser, Apat-kombinasjoner, fagområder og bandasjister).
+Kopien oppdateres hver natt av link:.github/workflows/snapshot.yml[en GitHub Action], og git-historikken viser dermed hva som er endret og når.
+
+Filene er i JSON Lines-format (én oppføring per linje), sortert på id. I `nlkkoder.jsonl` er feltet `refusjonskategorisats` fjernet, siden satsene finnes i `refusjonskategorisatser.jsonl`.
+
+Kjør lokalt:
+
+[source,sh]
+----
+pip install -r scripts/requirements.txt
+python scripts/snapshot.py --out data --validate
+----
+
 
 == Takstkoder
 URL https://opne-data-api.helserefusjon.no/v1/takstkoder
