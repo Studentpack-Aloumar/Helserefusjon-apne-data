@@ -1,0 +1,718 @@
+openapi: 3.1.0
+info:
+  title: Helserefusjon – åpne data
+  version: "1"
+  summary: Åpne data fra Helserefusjonsområdet (Helfo).
+  description: |
+    Maskinlesbar beskrivelse av APIet dokumentert i README.adoc.
+
+    Spesifikasjonen er skrevet ut fra dokumentasjonen og kontrollert mot faktiske
+    svar fra APIet. Den vedlikeholdes i dette repoet og er ikke publisert av Helfo.
+
+    Merknader om oppførsel:
+
+    * Felt uten verdi utelates normalt fra JSON-svaret (unntak: `bandasjister`,
+      som returnerer `null`).
+    * Ugyldige parameterverdier (f.eks. feil datoformat, eller en periode over
+      13 måneder på månedsendepunktene) gir `200` med tomt svar (`{}`, eller en
+      CSV med bare overskriftslinje), ikke en feilmelding.
+    * Manglende obligatoriske parametre gir `400`.
+    * Alle endepunkter unntatt eksportene støtter `Accept: application/json` og
+      `Accept: application/xml`.
+  license:
+    name: Norsk lisens for offentlige data (NLOD)
+    url: https://data.norge.no/nlod/no
+externalDocs:
+  description: README.adoc
+  url: https://github.com/studentpack-aloumar/helserefusjon-apne-data/blob/main/README.adoc
+servers:
+  - url: https://opne-data-api.helserefusjon.no/v1
+tags:
+  - name: Kodeverk
+  - name: Takstbruk
+    description: |
+      Aggregert takstbruk. Geografisk inndeling er basert på behandlers adresse.
+      Kommune/år inneholder bare takster med antall større enn 5. Kommune/måned
+      er begrenset til kommuner med over 10 000 innbyggere.
+  - name: Samhandlere
+
+paths:
+  /takstkoder:
+    get:
+      tags: [Kodeverk]
+      operationId: hentTakstkoder
+      summary: Takstkoder
+      parameters:
+        - name: fagomraade
+          in: query
+          description: Fagområdekode, se `/fagomraader`.
+          schema: {type: string, examples: [LE]}
+        - $ref: '#/components/parameters/gyldigdato'
+        - name: takstkode
+          in: query
+          description: Filtrer på takstkode. `%` (URL-kodet `%25`) gir jokertegnsøk.
+          schema: {type: string, examples: [2ad]}
+        - name: beskrivelse
+          in: query
+          description: Filtrer på beskrivelse. `%` (URL-kodet `%25`) gir jokertegnsøk.
+          schema: {type: string, examples: ['%undersøkelse%']}
+        - name: offisielle_ugyldige_takstkombinasjoner
+          in: query
+          description: |
+            Filtrer offisielle ugyldige takstkombinasjoner i feltet
+            `ugyldig_kombinasjon`. Om alt filtreres endres «Alle unntatt» til «Alle».
+          schema: {type: string, enum: [ja, nei]}
+      responses:
+        '200':
+          description: Takstkoder
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  takstkoder:
+                    type: array
+                    items: {$ref: '#/components/schemas/Takstkode'}
+            application/xml: {}
+
+  /nlkkoder:
+    get:
+      tags: [Kodeverk]
+      operationId: hentNlkKoder
+      summary: Laboratoriekodeverk (NLK-koder)
+      parameters:
+        - $ref: '#/components/parameters/gyldigdato'
+        - name: nlkkode
+          in: query
+          description: Filtrer på NLK-kode. `%` (URL-kodet `%25`) gir jokertegnsøk.
+          schema: {type: string, examples: [NOR35342]}
+        - $ref: '#/components/parameters/samhandlertype'
+      responses:
+        '200':
+          description: NLK-koder
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nlkkoder:
+                    type: array
+                    items: {$ref: '#/components/schemas/NlkKode'}
+            application/xml: {}
+
+  /refusjonskategorisatser:
+    get:
+      tags: [Kodeverk]
+      operationId: hentRefusjonskategorisatser
+      summary: Refusjonskategorier for NLK, NCRP og patologi
+      parameters:
+        - $ref: '#/components/parameters/gyldigdato'
+        - $ref: '#/components/parameters/samhandlertype'
+      responses:
+        '200':
+          description: Refusjonskategorisatser
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  refusjonskategorisatser:
+                    type: array
+                    items: {$ref: '#/components/schemas/Refusjonskategorisats'}
+            application/xml: {}
+
+  /apatkombinasjoner:
+    get:
+      tags: [Kodeverk]
+      operationId: hentApatKombinasjoner
+      summary: Apat-kombinasjoner
+      parameters:
+        - $ref: '#/components/parameters/gyldigdato'
+        - $ref: '#/components/parameters/samhandlertype'
+      responses:
+        '200':
+          description: Apat-kombinasjoner
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  apatKombinasjoner:
+                    type: array
+                    items: {$ref: '#/components/schemas/ApatKombinasjon'}
+            application/xml: {}
+
+  /fagomraader:
+    get:
+      tags: [Kodeverk]
+      operationId: hentFagomraader
+      summary: Fagområder med tilhørende praksistyper
+      responses:
+        '200':
+          description: Fagområder
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fagomraader:
+                    type: array
+                    items: {$ref: '#/components/schemas/Fagomraade'}
+            application/xml: {}
+
+  /bandasjister:
+    get:
+      tags: [Samhandlere]
+      operationId: hentBandasjister
+      summary: Bandasjister med direkte oppgjørsavtale
+      description: |
+        Siste gjeldende oversikt over bandasjister registrert med direkte
+        oppgjørsavtale i Helfos samhandlerregister (SAR).
+      responses:
+        '200':
+          description: Bandasjister
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bandasjister:
+                    type: array
+                    items: {$ref: '#/components/schemas/Bandasjist'}
+            application/xml: {}
+
+  # --- Aggregert takstbruk: JSON/XML ---------------------------------------
+  /takstbruk/agtakst/kommune/maned:
+    get:
+      tags: [Takstbruk]
+      operationId: takstbrukKommuneManed
+      summary: Takstbruk per kommune og måned
+      parameters:
+        - $ref: '#/components/parameters/fagomraadeListe'
+        - $ref: '#/components/parameters/fommaned'
+        - $ref: '#/components/parameters/tommaned'
+        - $ref: '#/components/parameters/takstkoder'
+        - $ref: '#/components/parameters/kommuner'
+        - $ref: '#/components/parameters/praksistyper'
+      responses:
+        '200': {$ref: '#/components/responses/Takstbruk'}
+        '400': {$ref: '#/components/responses/Feil'}
+  /takstbruk/agtakst/kommune/ar:
+    get:
+      tags: [Takstbruk]
+      operationId: takstbrukKommuneAr
+      summary: Takstbruk per kommune og år
+      parameters:
+        - $ref: '#/components/parameters/fagomraadeListe'
+        - $ref: '#/components/parameters/fomar'
+        - $ref: '#/components/parameters/tomar'
+        - $ref: '#/components/parameters/takstkoder'
+        - $ref: '#/components/parameters/kommuner'
+        - $ref: '#/components/parameters/praksistyper'
+      responses:
+        '200': {$ref: '#/components/responses/Takstbruk'}
+        '400': {$ref: '#/components/responses/Feil'}
+  /takstbruk/agtakst/fylke/maned:
+    get:
+      tags: [Takstbruk]
+      operationId: takstbrukFylkeManed
+      summary: Takstbruk per fylke og måned
+      parameters:
+        - $ref: '#/components/parameters/fagomraadeListe'
+        - $ref: '#/components/parameters/fommaned'
+        - $ref: '#/components/parameters/tommaned'
+        - $ref: '#/components/parameters/takstkoder'
+        - $ref: '#/components/parameters/fylker'
+        - $ref: '#/components/parameters/praksistyper'
+      responses:
+        '200': {$ref: '#/components/responses/Takstbruk'}
+        '400': {$ref: '#/components/responses/Feil'}
+  /takstbruk/agtakst/fylke/ar:
+    get:
+      tags: [Takstbruk]
+      operationId: takstbrukFylkeAr
+      summary: Takstbruk per fylke og år
+      parameters:
+        - $ref: '#/components/parameters/fagomraadeListe'
+        - $ref: '#/components/parameters/fomar'
+        - $ref: '#/components/parameters/tomar'
+        - $ref: '#/components/parameters/takstkoder'
+        - $ref: '#/components/parameters/fylker'
+        - $ref: '#/components/parameters/praksistyper'
+      responses:
+        '200': {$ref: '#/components/responses/Takstbruk'}
+        '400': {$ref: '#/components/responses/Feil'}
+  /takstbruk/agtakst/landet/maned:
+    get:
+      tags: [Takstbruk]
+      operationId: takstbrukLandetManed
+      summary: Takstbruk for hele landet per måned
+      parameters:
+        - $ref: '#/components/parameters/fagomraadeListe'
+        - $ref: '#/components/parameters/fommaned'
+        - $ref: '#/components/parameters/tommaned'
+        - $ref: '#/components/parameters/takstkoder'
+        - $ref: '#/components/parameters/praksistyper'
+      responses:
+        '200': {$ref: '#/components/responses/Takstbruk'}
+        '400': {$ref: '#/components/responses/Feil'}
+  /takstbruk/agtakst/landet/ar:
+    get:
+      tags: [Takstbruk]
+      operationId: takstbrukLandetAr
+      summary: Takstbruk for hele landet per år
+      parameters:
+        - $ref: '#/components/parameters/fagomraadeListe'
+        - $ref: '#/components/parameters/fomar'
+        - $ref: '#/components/parameters/tomar'
+        - $ref: '#/components/parameters/takstkoder'
+        - $ref: '#/components/parameters/praksistyper'
+      responses:
+        '200': {$ref: '#/components/responses/Takstbruk'}
+        '400': {$ref: '#/components/responses/Feil'}
+
+  # --- Aggregert takstbruk: CSV-eksport -------------------------------------
+  /takstbruk/eksport/agtakst/kommune/maned:
+    get:
+      tags: [Takstbruk]
+      operationId: eksportCsvKommuneManed
+      summary: Takstbruk per kommune og måned (CSV)
+      parameters:
+        - $ref: '#/components/parameters/fagomraadeListe'
+        - $ref: '#/components/parameters/fommaned'
+        - $ref: '#/components/parameters/tommaned'
+        - $ref: '#/components/parameters/takstkoder'
+        - $ref: '#/components/parameters/kommuner'
+        - $ref: '#/components/parameters/praksistyper'
+      responses:
+        '200': {$ref: '#/components/responses/Csv'}
+  /takstbruk/eksport/agtakst/kommune/ar:
+    get:
+      tags: [Takstbruk]
+      operationId: eksportCsvKommuneAr
+      summary: Takstbruk per kommune og år (CSV)
+      parameters:
+        - $ref: '#/components/parameters/fagomraadeListe'
+        - $ref: '#/components/parameters/fomar'
+        - $ref: '#/components/parameters/tomar'
+        - $ref: '#/components/parameters/takstkoder'
+        - $ref: '#/components/parameters/kommuner'
+        - $ref: '#/components/parameters/praksistyper'
+      responses:
+        '200': {$ref: '#/components/responses/Csv'}
+  /takstbruk/eksport/agtakst/fylke/maned:
+    get:
+      tags: [Takstbruk]
+      operationId: eksportCsvFylkeManed
+      summary: Takstbruk per fylke og måned (CSV)
+      parameters:
+        - $ref: '#/components/parameters/fagomraadeListe'
+        - $ref: '#/components/parameters/fommaned'
+        - $ref: '#/components/parameters/tommaned'
+        - $ref: '#/components/parameters/takstkoder'
+        - $ref: '#/components/parameters/fylker'
+        - $ref: '#/components/parameters/praksistyper'
+      responses:
+        '200': {$ref: '#/components/responses/Csv'}
+  /takstbruk/eksport/agtakst/fylke/ar:
+    get:
+      tags: [Takstbruk]
+      operationId: eksportCsvFylkeAr
+      summary: Takstbruk per fylke og år (CSV)
+      parameters:
+        - $ref: '#/components/parameters/fagomraadeListe'
+        - $ref: '#/components/parameters/fomar'
+        - $ref: '#/components/parameters/tomar'
+        - $ref: '#/components/parameters/takstkoder'
+        - $ref: '#/components/parameters/fylker'
+        - $ref: '#/components/parameters/praksistyper'
+      responses:
+        '200': {$ref: '#/components/responses/Csv'}
+  /takstbruk/eksport/agtakst/landet/maned:
+    get:
+      tags: [Takstbruk]
+      operationId: eksportCsvLandetManed
+      summary: Takstbruk for hele landet per måned (CSV)
+      parameters:
+        - $ref: '#/components/parameters/fagomraadeListe'
+        - $ref: '#/components/parameters/fommaned'
+        - $ref: '#/components/parameters/tommaned'
+        - $ref: '#/components/parameters/takstkoder'
+        - $ref: '#/components/parameters/praksistyper'
+      responses:
+        '200': {$ref: '#/components/responses/Csv'}
+  /takstbruk/eksport/agtakst/landet/ar:
+    get:
+      tags: [Takstbruk]
+      operationId: eksportCsvLandetAr
+      summary: Takstbruk for hele landet per år (CSV)
+      parameters:
+        - $ref: '#/components/parameters/fagomraadeListe'
+        - $ref: '#/components/parameters/fomar'
+        - $ref: '#/components/parameters/tomar'
+        - $ref: '#/components/parameters/takstkoder'
+        - $ref: '#/components/parameters/praksistyper'
+      responses:
+        '200': {$ref: '#/components/responses/Csv'}
+
+  # --- Aggregert takstbruk: Excel-eksport -----------------------------------
+  /takstbruk/eksport/msexcel/agtakst/kommune/maned:
+    get:
+      tags: [Takstbruk]
+      operationId: eksportExcelKommuneManed
+      summary: Takstbruk per kommune og måned (Excel)
+      parameters:
+        - $ref: '#/components/parameters/fagomraadeListe'
+        - $ref: '#/components/parameters/fommaned'
+        - $ref: '#/components/parameters/tommaned'
+        - $ref: '#/components/parameters/takstkoder'
+        - $ref: '#/components/parameters/kommuner'
+        - $ref: '#/components/parameters/praksistyper'
+      responses:
+        '200': {$ref: '#/components/responses/Excel'}
+  /takstbruk/eksport/msexcel/agtakst/kommune/ar:
+    get:
+      tags: [Takstbruk]
+      operationId: eksportExcelKommuneAr
+      summary: Takstbruk per kommune og år (Excel)
+      parameters:
+        - $ref: '#/components/parameters/fagomraadeListe'
+        - $ref: '#/components/parameters/fomar'
+        - $ref: '#/components/parameters/tomar'
+        - $ref: '#/components/parameters/takstkoder'
+        - $ref: '#/components/parameters/kommuner'
+        - $ref: '#/components/parameters/praksistyper'
+      responses:
+        '200': {$ref: '#/components/responses/Excel'}
+  /takstbruk/eksport/msexcel/agtakst/fylke/maned:
+    get:
+      tags: [Takstbruk]
+      operationId: eksportExcelFylkeManed
+      summary: Takstbruk per fylke og måned (Excel)
+      parameters:
+        - $ref: '#/components/parameters/fagomraadeListe'
+        - $ref: '#/components/parameters/fommaned'
+        - $ref: '#/components/parameters/tommaned'
+        - $ref: '#/components/parameters/takstkoder'
+        - $ref: '#/components/parameters/fylker'
+        - $ref: '#/components/parameters/praksistyper'
+      responses:
+        '200': {$ref: '#/components/responses/Excel'}
+  /takstbruk/eksport/msexcel/agtakst/fylke/ar:
+    get:
+      tags: [Takstbruk]
+      operationId: eksportExcelFylkeAr
+      summary: Takstbruk per fylke og år (Excel)
+      parameters:
+        - $ref: '#/components/parameters/fagomraadeListe'
+        - $ref: '#/components/parameters/fomar'
+        - $ref: '#/components/parameters/tomar'
+        - $ref: '#/components/parameters/takstkoder'
+        - $ref: '#/components/parameters/fylker'
+        - $ref: '#/components/parameters/praksistyper'
+      responses:
+        '200': {$ref: '#/components/responses/Excel'}
+  /takstbruk/eksport/msexcel/agtakst/landet/maned:
+    get:
+      tags: [Takstbruk]
+      operationId: eksportExcelLandetManed
+      summary: Takstbruk for hele landet per måned (Excel)
+      parameters:
+        - $ref: '#/components/parameters/fagomraadeListe'
+        - $ref: '#/components/parameters/fommaned'
+        - $ref: '#/components/parameters/tommaned'
+        - $ref: '#/components/parameters/takstkoder'
+        - $ref: '#/components/parameters/praksistyper'
+      responses:
+        '200': {$ref: '#/components/responses/Excel'}
+  /takstbruk/eksport/msexcel/agtakst/landet/ar:
+    get:
+      tags: [Takstbruk]
+      operationId: eksportExcelLandetAr
+      summary: Takstbruk for hele landet per år (Excel)
+      parameters:
+        - $ref: '#/components/parameters/fagomraadeListe'
+        - $ref: '#/components/parameters/fomar'
+        - $ref: '#/components/parameters/tomar'
+        - $ref: '#/components/parameters/takstkoder'
+        - $ref: '#/components/parameters/praksistyper'
+      responses:
+        '200': {$ref: '#/components/responses/Excel'}
+
+components:
+  parameters:
+    gyldigdato:
+      name: gyldigdato
+      in: query
+      description: Gir bare oppføringer som er gyldige på denne datoen (`yyyy-MM-dd`).
+      schema: {type: string, format: date, examples: ['2026-01-01']}
+    samhandlertype:
+      name: samhandlertype
+      in: query
+      description: PO – Poliklinikk, LR – Privat lab/radiologi.
+      schema: {type: string, enum: [PO, LR]}
+    fagomraadeListe:
+      name: fagomraade
+      in: query
+      required: true
+      description: Kommaseparerte fagområdekoder, se `/fagomraader`.
+      schema: {type: string, examples: [LE]}
+    fommaned:
+      name: fommaned
+      in: query
+      required: true
+      description: Første måned (`yyyyMM`). Perioden kan ikke være lengre enn 13 måneder.
+      schema: {type: string, pattern: '^\d{6}$', examples: ['202401']}
+    tommaned:
+      name: tommaned
+      in: query
+      required: true
+      description: Siste måned (`yyyyMM`). Perioden kan ikke være lengre enn 13 måneder.
+      schema: {type: string, pattern: '^\d{6}$', examples: ['202412']}
+    fomar:
+      name: fomar
+      in: query
+      required: true
+      description: Første år (`yyyy`).
+      schema: {type: string, pattern: '^\d{4}$', examples: ['2020']}
+    tomar:
+      name: tomar
+      in: query
+      required: true
+      description: Siste år (`yyyy`).
+      schema: {type: string, pattern: '^\d{4}$', examples: ['2024']}
+    takstkoder:
+      name: takstkoder
+      in: query
+      description: Kommaseparerte takstkoder.
+      schema: {type: string, examples: ['2ad,H1']}
+    kommuner:
+      name: kommuner
+      in: query
+      description: Kommaseparerte kommunenummer.
+      schema: {type: string, examples: ['0301']}
+    fylker:
+      name: fylker
+      in: query
+      description: Kommaseparerte fylkesnummer.
+      schema: {type: string, examples: ['03,15']}
+    praksistyper:
+      name: praksistyper
+      in: query
+      description: Kommaseparerte praksistypekoder, se `/fagomraader`.
+      schema: {type: string, examples: ['FALE,LEVA']}
+
+  responses:
+    Takstbruk:
+      description: |
+        Aggregert takstbruk. Feltet `maned` finnes bare på månedsendepunktene,
+        `behandler_kommunenr` bare på kommune-, og `behandler_fylke` bare på
+        fylkesendepunktene.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/TakstbrukSvar'}
+        application/xml: {}
+    Csv:
+      description: |
+        Semikolonseparert CSV med overskriftslinje. Kolonnene er de samme som i
+        JSON-svaret, men `samhandler_praksis_type` heter `praksis_type_navn`.
+      content:
+        application/csv:
+          schema: {type: string}
+    Excel:
+      description: Excel-arbeidsbok (.xls).
+      content:
+        application/vnd.ms-excel:
+          schema: {type: string, contentEncoding: binary}
+    Feil:
+      description: Manglende obligatorisk parameter.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Feil'}
+
+  schemas:
+    Dato:
+      type: string
+      format: date
+      pattern: '^\d{4}-\d{2}-\d{2}$'
+
+    Takstkode:
+      type: object
+      additionalProperties: false
+      required: [takst_id, takstkode, fagomraade, fradato, honorar, refusjon, beskrivelse, resource_id]
+      properties:
+        takst_id: {type: string}
+        takstkode: {type: string}
+        fagomraade: {type: string}
+        fradato: {$ref: '#/components/schemas/Dato'}
+        tildato: {$ref: '#/components/schemas/Dato'}
+        honorar: {type: number}
+        refusjon: {type: number}
+        egenandel: {type: number}
+        pasient_egenbetaling: {type: number}
+        maks_repetisjoner: {type: integer}
+        repetisjonsprosent: {type: integer}
+        redusert_ref_fra_repetisjon: {type: integer}
+        redusert_repetisjonsprosent: {type: integer}
+        spesialisttakst:
+          type: string
+          enum: ['true', 'false']
+          description: Boolsk verdi levert som tekst.
+        ugyldig_kombinasjon:
+          type: string
+          description: Takstkoder som ikke kan kombineres med denne, skilt med `|`.
+        krever_takst: {type: string}
+        krever_prosedyre: {type: string}
+        krever_diagnose: {type: string}
+        maks_antall_per_aar: {type: string}
+        maks_antall_per_kalender_aar: {type: integer}
+        maks_antall_gjelder_pasient: {type: string}
+        minimum_tidsbruk: {type: integer}
+        beskrivelse: {type: string}
+        resource_id: {type: string}
+        tidsbruk_per_rep: {type: string}
+        merknader:
+          type: array
+          description: Merknader til takstkoden. Ikke beskrevet i README.adoc.
+          items:
+            type: object
+            additionalProperties: false
+            required: [merknad_nr, beskrivelse]
+            properties:
+              merknad_nr: {type: string}
+              beskrivelse: {type: string}
+
+    NlkKode:
+      type: object
+      additionalProperties: false
+      required: [nlkKodeid, nlkKode, norsk_bruksnavn, fagomraadeNlk, fradato, stjernekode]
+      properties:
+        nlkKodeid: {type: string}
+        nlkKode: {type: string}
+        norsk_bruksnavn: {type: string}
+        komponent: {type: string}
+        system: {type: string}
+        enhet: {type: string}
+        egenskapsart: {type: string}
+        spesifisertKomponent: {type: string}
+        npuDefinisjon: {type: string}
+        npuSpesialitet: {type: string}
+        fagomraadeSekundaert: {type: string}
+        fagomraadeNlk: {type: string}
+        fradato: {$ref: '#/components/schemas/Dato'}
+        tildato: {$ref: '#/components/schemas/Dato'}
+        refusjonskategori: {type: string}
+        erstattesAv: {type: string}
+        hvaEndret: {type: string}
+        sistEndretDato: {type: string}
+        stjernekode: {type: string}
+        ugyldigKombinasjon: {type: string}
+        systemSpesifikasjon: {type: string}
+        egenskapsartSpesifikasjon: {type: string}
+        gruppering: {type: string}
+        refusjonskategorisats:
+          type: array
+          description: Alle satser (også historiske) for kodens refusjonskategori.
+          items: {$ref: '#/components/schemas/Refusjonskategorisats'}
+
+    Refusjonskategorisats:
+      type: object
+      additionalProperties: false
+      required: [refusjonskategoriid, refusjonskategori, samhandlertype, refusjonssats, fradato]
+      properties:
+        refusjonskategoriid: {type: string}
+        refusjonskategori: {type: string}
+        samhandlertype: {type: string}
+        refusjonssats: {type: number}
+        fradato: {$ref: '#/components/schemas/Dato'}
+        tildato: {$ref: '#/components/schemas/Dato'}
+
+    ApatKombinasjon:
+      type: object
+      additionalProperties: false
+      required: [t_kode, p_kode, refusjonskategori, belop, samhandler_type, fradato]
+      properties:
+        t_kode: {type: string}
+        p_kode: {type: string}
+        refusjonskategori: {type: string}
+        belop: {type: number}
+        samhandler_type: {type: string}
+        fradato: {$ref: '#/components/schemas/Dato'}
+        tildato: {$ref: '#/components/schemas/Dato'}
+
+    Fagomraade:
+      type: object
+      additionalProperties: false
+      required: [fagomraadekode, fagomraadetekst, aggregertedata]
+      properties:
+        fagomraadekode: {type: string}
+        fagomraadetekst: {type: string}
+        aggregertedata:
+          type: string
+          enum: ['0', '1']
+          description: '`1` om det finnes aggregert takstbruk for fagområdet.'
+        praksistyper:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [praksistypekode, praksistypetekst, aggregertedata]
+            properties:
+              praksistypekode: {type: string}
+              praksistypetekst: {type: string}
+              aggregertedata: {type: string, enum: ['0', '1']}
+
+    Bandasjist:
+      type: object
+      additionalProperties: false
+      required: [sar_id, sar_navn, sar_orgnr, tidspunkt_oppdatert]
+      properties:
+        sar_id: {type: string, description: Unik id for samhandleren i SAR.}
+        sar_navn: {type: string}
+        sar_orgnr: {type: string}
+        hovedenhet_orgnr: {type: [string, 'null']}
+        underenhet_orgnr: {type: [string, 'null']}
+        gyldig_fra: {type: [string, 'null']}
+        gyldig_til: {type: [string, 'null']}
+        status:
+          type: [string, 'null']
+          description: '`slettet` hvis bandasjisten ikke lenger er aktiv i BRREG.'
+        tidspunkt_registrert: {type: [string, 'null']}
+        tidspunkt_oppdatert:
+          type: string
+          description: Tidsstempel på formen `2020-05-15T08:57:56.000+0000`.
+
+    TakstbrukSvar:
+      type: object
+      properties:
+        antall: {type: integer}
+        takstbruk:
+          type: array
+          items: {$ref: '#/components/schemas/Takstbruk'}
+
+    Takstbruk:
+      type: object
+      additionalProperties: false
+      required: [ar, takstkode, fagomraade, praksis_type_kode, antall_regninger, sum_antall_takst, sum_refusjon]
+      properties:
+        ar: {type: string, pattern: '^\d{4}$'}
+        maned: {type: string, pattern: '^\d{2}$'}
+        behandler_kommunenr: {type: string}
+        behandler_fylke: {type: string}
+        takstkode: {type: string}
+        fagomraade: {type: string}
+        praksis_type_kode: {type: string}
+        samhandler_praksis_type: {type: string}
+        antall_regninger: {type: integer}
+        sum_antall_takst: {type: integer}
+        sum_refusjon: {type: number}
+        sum_egenandel_betalt_av_pasient: {type: number}
+        sum_egenandel_dekket_av_folketrygden: {type: number}
+
+    Feil:
+      type: object
+      properties:
+        servlet: {type: string}
+        message: {type: string}
+        url: {type: string}
+        status: {type: string}

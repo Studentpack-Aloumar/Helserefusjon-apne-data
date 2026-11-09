@@ -1,0 +1,52 @@
+name: Nightly snapshot
+
+on:
+  schedule:
+    - cron: "17 3 * * *" # 03:17 UTC every day
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scripts/requirements.txt
+
+      - run: pip install -r scripts/requirements.txt
+
+      # Write the data even if validation fails, so a change in the API's
+      # format never stops the snapshot. The job is failed afterwards instead.
+      - name: Fetch and validate
+        id: fetch
+        run: python scripts/snapshot.py --out data --validate || echo "failed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Commit changes
+        run: |
+          git add data
+          if git diff --cached --quiet; then
+            echo "No changes since the last snapshot."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Snapshot $(date -u +%F)" -m "$(git diff --cached --stat | tail -n 1)"
+          git push
+
+      - name: Report validation failure
+        if: steps.fetch.outputs.failed == 'true'
+        run: |
+          echo "::error::A request failed or the API no longer matches openapi.yaml. See the 'Fetch and validate' step."
+          exit 1
